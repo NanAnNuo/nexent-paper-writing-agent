@@ -319,4 +319,61 @@ python -m unittest discover -s tests -q
 
 ```powershell
 @'
-impor
+import asyncio
+from fastmcp import Client
+
+async def main():
+    async with Client("http://127.0.0.1:8001/sse") as client:
+        tools = await client.list_tools()
+        print([tool.name for tool in tools])
+
+asyncio.run(main())
+'@ | python -
+```
+
+工具列表应至少包含：
+
+```text
+generate_outline
+confirm_outline_and_start_writing
+get_write_paper_job_status
+```
+
+### 成品验收建议
+
+- 使用两个完全不同主题连续生成两篇论文，核查标题、章节、图表、引用和下载路径没有串稿
+- 上传一张图片材料，检查最终 DOCX 是否包含该图
+- 缺真实数据并接受降级写作时，检查图题和表题是否明确标注“模拟数据/待替换”
+- Windows + Word 模式下，检查目录是否可点击跳转且打开文档不弹出外部字段更新提示
+- Docker 模式下，检查论文、图片和目录域是否生成，并在 Word 中更新目录后验证跳转
+
+## 数据安全与提交规则
+
+以下文件或目录包含密钥、上传材料、运行状态、图片缓存或生成文档，已排除在 Git 外，不应上传至公开仓库或问题讨论：
+
+```text
+.env
+config.yaml
+data/checkpoints/
+data/assets/
+data/outputs/
+data/chroma_db/
+data/verification/
+figures_path_check/
+server_stdout.log
+server_stderr.log
+mcp_output.log
+```
+
+发布截图或 DOCX 前，请自行检查其中是否包含 API Key、个人信息、未公开材料和不应公开的研究数据。
+
+## 已知限制
+
+- Docker 模式不具备 Microsoft Word COM 自动化，无法在容器内部预填 Word 目录显示文本
+- 开放源图片检索可用性受网络与第三方 API 限制；失败时系统将继续交付文档并给出警告
+- 材料不足时生成的模拟结果只能作为占位，不得视作真实实验结论
+- 长任务页面保活需要应用本仓库提供的 Nexent 补丁，或使用未来包含等效修复的官方版本
+
+## License
+
+本项目基于 [Apache License 2.0](./LICENSE) 发布。
