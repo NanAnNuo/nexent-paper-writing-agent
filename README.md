@@ -60,6 +60,16 @@ nexent-system-prompt.md Nexent 智能体配置说明
 ## 这是nexent平台上的完整流程演示：
 <img width="1351" height="5023" alt="16181D47744BC7F3235C53930F9CC50E" src="https://github.com/user-attachments/assets/9f00046f-48f3-4878-9893-d85d2b948f8b" />
 
+## 这是生成的论文质量展示：
+<img width="1952" height="873" alt="36A87E8E82AF21E77A291E0F5FE44706" src="https://github.com/user-attachments/assets/5fb9cce0-5aa4-4207-8b96-35be5237ec6a" />
+<img width="2021" height="1179" alt="5E7E6423245D14D64E0C737DD566FFB9" src="https://github.com/user-attachments/assets/223f4503-c495-48e3-8fee-cfd34588621f" />
+<img width="944" height="1166" alt="60CE35FECCD807FADDDF845381CF074A" src="https://github.com/user-attachments/assets/daf96019-cc2d-4545-a622-c3ba46ee3afe" />
+<img width="933" height="1063" alt="F2FE4FDCB5DC35985E2328FF221B1E94" src="https://github.com/user-attachments/assets/0b68fa98-2e8b-4958-bdab-6a049b14a2b7" />
+<img width="1158" height="1131" alt="2A10D66E9D6FDE9E859176280FDA9593" src="https://github.com/user-attachments/assets/02ca0d57-51cb-4d00-8c2c-0dda1335a255" />
+<img width="1068" height="1227" alt="4EF093626D65716A02A5D92A9B1A9AC0" src="https://github.com/user-attachments/assets/4873bd42-7e99-4d7f-a0e9-765a57393669" />
+<img width="1077" height="1301" alt="D14ADCC0EF49104F6F54222E03D7201B" src="https://github.com/user-attachments/assets/94eb1c90-49c0-43a5-a0e9-f935a071a2a9" />
+<img width="1041" height="845" alt="05357FA17BED3E5D79DCB560356289BA" src="https://github.com/user-attachments/assets/6fc10aef-56e3-476f-96f9-6fe3444aba6c" />
+
 ## 使用前准备
 
 ### 必需环境
@@ -303,6 +313,9 @@ ab 20.0
 - 此补丁修复的是 Nexent 页面与运行层的长工具等待体验，不修改论文内容，也不替代 Agent 自身的任务隔离逻辑。
 - 如果未来官方 Nexent 已合并等效修复，不应重复应用本补丁。
 - 使用 Git 管理 Nexent 源码时，补丁应用后请单独提交，避免与 API Key、`.env` 或其他本地 Docker 配置混合提交。
+### 打补丁后的效果如下：
+<img width="975" height="347" alt="AA4A106ABAF768B802837965D97C3C4F" src="https://github.com/user-attachments/assets/f53c6047-b487-4322-943f-ff205aca4e9c" />
+
 
 ## 测试与验证
 
