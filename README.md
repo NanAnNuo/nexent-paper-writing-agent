@@ -1,8 +1,35 @@
 # Nexent Paper Writing Agent
 
-基于 [Nexent](https://github.com/ModelEngine-Group/nexent) 的本地 MCP 论文写作 Agent。用户上传材料或给出主题后，Agent 首先生成大纲并等待确认；确认后仅启动一次整篇后台写作任务，最终输出可下载的 Word `.docx` 文档。
+基于 [Nexent](https://github.com/ModelEngine-Group/nexent) 平台的三元推理面，在本地运行的端到端论文自动写作 MCP Agent。
 
-本项目默认输出重庆大学硕士专业学位论文风格的 Word 文档，支持中英文封面、摘要、目录域、分章正文、图表、参考文献与致谢。项目使用 Apache License 2.0 开源。
+## 为什么需要这个项目
+
+学术写作需要大量文献梳理、章节组织、图表生成和格式编排。传统上这些环节完全依靠手工作业；项目试图验证一种新型工作流：**Human-in-the-loop 确认大纲 → 后台全自动写作 → Word 成品交付**，让作者专注于研究方向与材料准备，而非文字排版和格式。
+
+## 核心架构
+
+项目采用 **三元推理代理 + 本地执行面** 的混合架构：
+
+| 代理 | 职责 | 调用方式 |
+|------|------|----------|
+| **Generator_Writer** | 按大纲逐章写作，带引用标注 | LLM 调用 |
+| **Generator_Coder** | 为结果数据生成 Matplotlib 绘图代码 | LLM 调用 + 本地沙盒执行 |
+| **Discriminator** | 审查章节质量与证据合规性，驱动重写循环 | LLM 调用 |
+
+三个代理运行在 Nexent 平台的推理面上；所有编排逻辑（6 阶段状态机）、材料管理、代码沙盒、证据审计和 DOCX 渲染在本地 Python 进程中完成，不依赖第三方 API。
+
+## 关键设计
+
+- **证据门禁**：写作前检查材料充足性，材料不足时拒绝生成，仅在用户明确确认后方可启动降级写作（图表/数据标记为"模拟占位"）
+- **图表沙盒**：Generator_Coder 生成的代码在本地 `subprocess` 沙盒中执行，失败后自动带报错信息重试（最多 3 次 Debug 循环）
+- **质量审计**：写作完成后对全稿执行确定性规则检查（EEG 通道一致性、分类器范围冲突、结果数字无证据支撑、结论过度声称等）
+- **任务隔离**：每篇论文独占材料缓存、图片资产、输出路径和下载链接，不同主题不会串稿
+- **Word 成品**：直接生成重庆大学硕士专业学位论文格式的 `.docx`，包含中英文封面、摘要、可跳转目录域、分章正文、图/表题注编号、参考文献和致谢
+- **非技术主题保护**：自然语言处理判别论文主题领域，避免在非工程主题（文学、经济等）中插入算法流程图或模拟实验表格
+
+## 工作流程
+
+用户上传材料或给出主题后，Agent 首先生成大纲并等待人工确认；确认后仅启动一次整篇后台写作任务，经逐章写作 → 审查 → 引用解析 → 渲染，最终输出可下载的 `.docx` 文档。
 
 ## 功能概览
 
@@ -292,61 +319,4 @@ python -m unittest discover -s tests -q
 
 ```powershell
 @'
-import asyncio
-from fastmcp import Client
-
-async def main():
-    async with Client("http://127.0.0.1:8001/sse") as client:
-        tools = await client.list_tools()
-        print([tool.name for tool in tools])
-
-asyncio.run(main())
-'@ | python -
-```
-
-工具列表应至少包含：
-
-```text
-generate_outline
-confirm_outline_and_start_writing
-get_write_paper_job_status
-```
-
-### 成品验收建议
-
-- 使用两个完全不同主题连续生成两篇论文，核查标题、章节、图表、引用和下载路径没有串稿
-- 上传一张图片材料，检查最终 DOCX 是否包含该图
-- 缺真实数据并接受降级写作时，检查图题和表题是否明确标注“模拟数据/待替换”
-- Windows + Word 模式下，检查目录是否可点击跳转且打开文档不弹出外部字段更新提示
-- Docker 模式下，检查论文、图片和目录域是否生成，并在 Word 中更新目录后验证跳转
-
-## 数据安全与提交规则
-
-以下文件或目录包含密钥、上传材料、运行状态、图片缓存或生成文档，已排除在 Git 外，不应上传至公开仓库或问题讨论：
-
-```text
-.env
-config.yaml
-data/checkpoints/
-data/assets/
-data/outputs/
-data/chroma_db/
-data/verification/
-figures_path_check/
-server_stdout.log
-server_stderr.log
-mcp_output.log
-```
-
-发布截图或 DOCX 前，请自行检查其中是否包含 API Key、个人信息、未公开材料和不应公开的研究数据。
-
-## 已知限制
-
-- Docker 模式不具备 Microsoft Word COM 自动化，无法在容器内部预填 Word 目录显示文本
-- 开放源图片检索可用性受网络与第三方 API 限制；失败时系统将继续交付文档并给出警告
-- 材料不足时生成的模拟结果只能作为占位，不得视作真实实验结论
-- 长任务页面保活需要应用本仓库提供的 Nexent 补丁，或使用未来包含等效修复的官方版本
-
-## License
-
-本项目基于 [Apache License 2.0](./LICENSE) 发布。
+impor
