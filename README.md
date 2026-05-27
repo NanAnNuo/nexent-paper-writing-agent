@@ -57,6 +57,8 @@ Dockerfile             Agent 容器镜像
 docker-compose.yml     Agent 一键容器启动配置
 nexent-system-prompt.md Nexent 智能体配置说明
 ```
+## 这是nexent平台上的完整流程演示：
+<img width="1351" height="5023" alt="16181D47744BC7F3235C53930F9CC50E" src="https://github.com/user-attachments/assets/9f00046f-48f3-4878-9893-d85d2b948f8b" />
 
 ## 使用前准备
 
