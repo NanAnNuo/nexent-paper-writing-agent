@@ -154,6 +154,8 @@ Copy-Item .env.example .env
 Copy-Item config.example.yaml config.yaml
 ```
 
+> **⚠️ 必须执行 `Copy-Item config.example.yaml config.yaml`**，否则 Docker 会将 `config.yaml` 创建为目录而非文件，导致容器启动失败。
+
 按上文要求编辑 `.env`，至少配置模型 API。若用户浏览器就在运行 Docker 的同一台机器上，保留：
 
 ```dotenv
