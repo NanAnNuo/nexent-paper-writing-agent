@@ -1,0 +1,13 @@
+.git
+.env
+.idea
+.vscode
+__pycache__
+*.py[cod]
+*.log
+config.yaml
+data
+figures
+figures_path_check
+*.docx
+*.pdf

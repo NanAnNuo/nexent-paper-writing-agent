@@ -1,0 +1,4 @@
+-r requirements.txt
+
+# Enables Microsoft Word COM automation for pre-populating clickable TOC text.
+pywin32>=306

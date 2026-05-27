@@ -1,0 +1,47 @@
+# Copy this file to config.yaml and adjust values for your deployment.
+
+server:
+  host: "0.0.0.0"
+  port: 8001
+  advertised_host: ""  # Browser-facing download host; PAPER_AGENT_ADVERTISED_HOST overrides this value.
+  transport: "streamable-http"
+
+llm:
+  provider: "openai"
+  model: "your-model-name"
+  base_url: "https://your-openai-compatible-api.example/v1"
+  temperature: 0.7
+  max_tokens: 32768
+
+literature_search:
+  api_base: "https://api.semanticscholar.org/graph/v1"
+  default_limit: 15
+  per_query_limit: 8
+  request_delay: 1.5
+
+nexent:
+  file_gateway_url: ""
+  minio_public_url: "http://localhost:9010"
+
+paper:
+  max_sections: 20
+  section_word_count: "1500-3000"
+  context_window: 3
+  output_dir: "data/outputs"
+  checkpoint_dir: "data/checkpoints"
+
+figure:
+  enabled: true
+  max_debug_attempts: 3
+  sandbox_timeout: 30
+  output_formats: ["png"]
+  color_palette: "nature"
+
+discriminator:
+  enabled: true
+  max_review_attempts: 3
+
+output:
+  formats: ["docx"]
+  include_generation_notes: true
+  default_language: "中文"

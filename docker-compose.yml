@@ -1,0 +1,16 @@
+services:
+  paper-agent:
+    build: .
+    image: nexent-paper-writing-agent:latest
+    container_name: nexent-paper-writing-agent
+    env_file:
+      - .env
+    environment:
+      PAPER_AGENT_HOST: "0.0.0.0"
+      PAPER_AGENT_PORT: "8001"
+    ports:
+      - "${PAPER_AGENT_PORT:-8001}:8001"
+    volumes:
+      - ./config.yaml:/app/config.yaml:ro
+      - ./data:/app/data
+    restart: unless-stopped

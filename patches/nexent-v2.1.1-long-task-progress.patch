@@ -1,0 +1,180 @@
+diff --git a/sdk/nexent/core/agents/run_agent.py b/sdk/nexent/core/agents/run_agent.py
+index bb029795..c7644b37 100644
+--- a/sdk/nexent/core/agents/run_agent.py
++++ b/sdk/nexent/core/agents/run_agent.py
+@@ -1,5 +1,7 @@
+ import asyncio
++import json
+ import logging
++import time
+ from contextvars import copy_context
+ from threading import Thread
+ from typing import Any, Dict, Union
+@@ -13,6 +15,49 @@ from ...monitor import get_monitoring_manager
+ logger = logging.getLogger("run_agent")
+ logger.setLevel(logging.DEBUG)
+ monitoring_manager = get_monitoring_manager()
++SSE_KEEPALIVE_INTERVAL_SECONDS = 20.0
++STREAM_COALESCE_TYPES = {
++    "model_output_thinking",
++    "model_output_deep_thinking",
++    "model_output_code",
++}
++
++
++def _coalesce_cached_messages(messages: list[str]) -> list[str]:
++    """Merge adjacent text stream fragments before sending them to the browser."""
++    output: list[str] = []
++    pending: dict | None = None
++
++    def flush_pending() -> None:
++        nonlocal pending
++        if pending is not None:
++            output.append(json.dumps(pending, ensure_ascii=False))
++            pending = None
++
++    for message in messages:
++        try:
++            payload = json.loads(message)
++        except (TypeError, json.JSONDecodeError):
++            flush_pending()
++            output.append(message)
++            continue
++        message_type = payload.get("type")
++        content = payload.get("content")
++        if (
++            message_type in STREAM_COALESCE_TYPES
++            and isinstance(content, str)
++            and set(payload) <= {"type", "content"}
++        ):
++            if pending and pending["type"] == message_type:
++                pending["content"] += content
++            else:
++                flush_pending()
++                pending = {"type": message_type, "content": content}
++            continue
++        flush_pending()
++        output.append(message)
++    flush_pending()
++    return output
+ 
+ 
+ def _detect_transport(url: str) -> str:
+@@ -137,19 +182,33 @@ async def agent_run(agent_run_info: AgentRunInfo):
+     thread_agent = Thread(target=ctx.run, args=(agent_run_thread, agent_run_info))
+     thread_agent.start()
+     monitoring_manager.add_span_event("agent_run.thread_started")
++    last_stream_at = time.monotonic()
++    active_started_at = last_stream_at
+ 
+     while thread_agent.is_alive():
+         monitoring_manager.add_span_event("agent_run.get_cached_message")
+         cached_message = observer.get_cached_message()
+         monitoring_manager.add_span_event(
+             "agent_run.get_cached_message_completed")
+-        for message in cached_message:
+-            yield message
+-            monitoring_manager.add_span_event("agent_run.yield_message")
+-            if len(cached_message) < 8:
+-                await asyncio.sleep(0.05)
++        if cached_message:
++            for message in _coalesce_cached_messages(cached_message):
++                yield message
++                last_stream_at = time.monotonic()
++                monitoring_manager.add_span_event("agent_run.yield_message")
++            await asyncio.sleep(0)
++        elif time.monotonic() - last_stream_at >= SSE_KEEPALIVE_INTERVAL_SECONDS:
++            elapsed = int(time.monotonic() - active_started_at)
++            content = (
++                f"\n[系统进度] 本地工具仍在执行，已等待 {elapsed} 秒；完成后将自动返回结果。\n"
++                if observer.lang == "zh"
++                else f"\n[Progress] Local tool execution is still active ({elapsed}s elapsed); results will return automatically.\n"
++            )
++            # Stream transport status as task-detail text, not a final answer.
++            yield json.dumps({"type": "model_output_thinking", "content": content}, ensure_ascii=False)
++            last_stream_at = time.monotonic()
++            monitoring_manager.add_span_event("agent_run.yield_keepalive")
+         await asyncio.sleep(0.1)
+ 
+     cached_message = observer.get_cached_message()
+-    for message in cached_message:
+-        yield message
+\ No newline at end of file
++    for message in _coalesce_cached_messages(cached_message):
++        yield message
+diff --git a/test/sdk/core/agents/test_run_agent.py b/test/sdk/core/agents/test_run_agent.py
+index dac68216..4aba17e2 100644
+--- a/test/sdk/core/agents/test_run_agent.py
++++ b/test/sdk/core/agents/test_run_agent.py
+@@ -582,8 +582,27 @@ async def test_agent_run_streams_messages_while_thread_alive(basic_agent_run_inf
+ 
+     # Assert: streamed + final messages
+     assert received == ["m1", "m2", "final1", "final2"]
+-    # Ensure thread was started and sleeps were awaited (both inner and outer occur)
+-    assert any(d in (0.05, 0.1) for d in sleep_calls)
++    # The event loop is yielded without imposing a per-fragment display delay.
++    assert 0 in sleep_calls
++    assert 0.1 in sleep_calls
++
++
++def test_coalesce_cached_messages_merges_adjacent_stream_fragments():
++    messages = [
++        run_agent.json.dumps({"type": "model_output_thinking", "content": "逐"}),
++        run_agent.json.dumps({"type": "model_output_thinking", "content": "字"}),
++        run_agent.json.dumps({"type": "tool", "content": "call"}),
++        run_agent.json.dumps({"type": "model_output_code", "content": "a"}),
++        run_agent.json.dumps({"type": "model_output_code", "content": "b"}),
++    ]
++
++    merged = [run_agent.json.loads(item) for item in run_agent._coalesce_cached_messages(messages)]
++
++    assert merged == [
++        {"type": "model_output_thinking", "content": "逐字"},
++        {"type": "tool", "content": "call"},
++        {"type": "model_output_code", "content": "ab"},
++    ]
+ 
+ 
+ @pytest.mark.asyncio
+@@ -618,6 +637,41 @@ async def test_agent_run_skips_loop_when_thread_not_alive(basic_agent_run_info,
+     assert received == ["final_only"]
+ 
+ 
++@pytest.mark.asyncio
++async def test_agent_run_yields_visible_progress_keepalive_during_idle_tool_wait(basic_agent_run_info, monkeypatch):
++    """Long-running tools should keep the stream alive with task-detail progress."""
++    basic_agent_run_info.observer.get_cached_message.side_effect = [[], []]
++
++    async def fast_sleep(duration):  # pylint: disable=unused-argument
++        return None
++
++    monkeypatch.setattr(run_agent.asyncio, "sleep", fast_sleep)
++    monkeypatch.setattr(run_agent, "SSE_KEEPALIVE_INTERVAL_SECONDS", 0.0)
++
++    class FakeThread:
++        def __init__(self, target=None, args=None):  # pylint: disable=unused-argument
++            self._alive_checks = 0
++
++        def start(self):
++            return None
++
++        def is_alive(self):
++            self._alive_checks += 1
++            return self._alive_checks == 1
++
++    monkeypatch.setattr(run_agent, "Thread", FakeThread)
++
++    received = []
++    async for item in run_agent.agent_run(basic_agent_run_info):
++        received.append(item)
++
++    assert len(received) == 1
++    heartbeat = run_agent.json.loads(received[0])
++    assert heartbeat["type"] == "model_output_thinking"
++    assert "[Progress]" in heartbeat["content"]
++    assert "results will return automatically" in heartbeat["content"]
++
++
+ # ----------------------------------------------------------------------------
+ # Additional tests for improved coverage
+ # ----------------------------------------------------------------------------
