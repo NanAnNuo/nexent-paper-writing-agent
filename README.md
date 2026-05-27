@@ -60,7 +60,7 @@ nexent-system-prompt.md Nexent 智能体配置说明
 ## 这是nexent平台上的完整流程演示：
 <img width="1351" height="5023" alt="16181D47744BC7F3235C53930F9CC50E" src="https://github.com/user-attachments/assets/9f00046f-48f3-4878-9893-d85d2b948f8b" />
 
-## 这是生成的论文质量展示：
+## 这是生成的论文质量（部分截图）展示：
 <img width="1952" height="873" alt="36A87E8E82AF21E77A291E0F5FE44706" src="https://github.com/user-attachments/assets/5fb9cce0-5aa4-4207-8b96-35be5237ec6a" />
 <img width="2021" height="1179" alt="5E7E6423245D14D64E0C737DD566FFB9" src="https://github.com/user-attachments/assets/223f4503-c495-48e3-8fee-cfd34588621f" />
 <img width="944" height="1166" alt="60CE35FECCD807FADDDF845381CF074A" src="https://github.com/user-attachments/assets/daf96019-cc2d-4545-a622-c3ba46ee3afe" />
